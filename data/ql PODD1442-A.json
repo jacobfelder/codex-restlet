@@ -1,0 +1,29 @@
+[
+     {
+          "itemaccountexternalid": "14000",
+          "cci_locationexternalid": "118",
+          "vendorexternalid": "11114",
+          "termsexternalid": "NET 30",
+          "subsidiaryexternalid": "133",
+          "id": 730879,
+          "trandatechar": "2025-11-16",
+          "trandateoriginal": "16/11/2025",
+          "tranid": "PODD1442-A",
+          "externalid": "COUPA-INV-374084",
+          "invoicememonvl": null,
+          "invoicememocoalesce": null,
+          "invoicememo": null,
+          "custbody_cci_dedicated_payment": "F",
+          "createdfrom": 730877,
+          "netamount": 3.8,
+          "quantity": 20,
+          "item": 2050,
+          "orderline": 1,
+          "coupaorderlinenumber": "730877_1",
+          "coupaoriginalid": "374084",
+          "taxrate": 0.1,
+          "taxamount": 0.38,
+          "taxcodeid": 26,
+          "currencyexternalid": "AUD"
+     }
+]
