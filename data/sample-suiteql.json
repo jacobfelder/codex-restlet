@@ -1,0 +1,15 @@
+{
+  "rows": [
+    {
+      "id": "SO-5001",
+      "externalId": "PO-1001",
+      "total": 150.5,
+      "currency": "USD"
+    }
+  ],
+  "lines": [
+    { "sku": "A100", "qty": 2, "amount": 50 },
+    { "sku": "B200", "qty": 1, "amount": 100.5 },
+    { "sku": "C999", "qty": 3, "amount": 75 }
+  ]
+}

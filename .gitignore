@@ -1,0 +1,5 @@
+node_modules
+logs/*.log
+logs/*.txt
+.env
+.DS_Store

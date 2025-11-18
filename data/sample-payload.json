@@ -1,0 +1,17 @@
+{
+  "order": {
+    "id": "PO-1001",
+    "total": 150.5,
+    "currency": "USD",
+    "status": "Pending Fulfillment"
+  },
+  "customer": {
+    "id": "CUST-2001",
+    "email": "customer@example.com",
+    "name": "Acme Corp"
+  },
+  "lines": [
+    { "sku": "A100", "qty": 2, "amount": 50 },
+    { "sku": "B200", "qty": 1, "amount": 100.5 }
+  ]
+}
