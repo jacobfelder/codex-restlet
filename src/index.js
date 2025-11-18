@@ -1,22 +1,26 @@
-const path = require('path');
-const logger = require('./logger');
-const { MappingWorkspace } = require('./mapping/workspace');
+const path = require("path");
+const logger = require("./logger");
+const { MappingWorkspace } = require("./mapping/workspace");
 
 function run() {
   const workspace = new MappingWorkspace({
-    label: 'suiteql-mapper',
-    logLevel: process.env.LOG_LEVEL || 'info',
+    label: "suiteql-mapper",
+    logLevel: process.env.LOG_LEVEL || "info",
   });
 
-  const payloadPath = process.env.PAYLOAD_PATH || path.join(__dirname, '..', 'data', 'sample-payload.json');
-  const suiteQlPath = process.env.SUITEQL_PATH || path.join(__dirname, '..', 'data', 'sample-suiteql.json');
+  const payloadPath =
+    process.env.PAYLOAD_PATH ||
+    path.join(__dirname, "..", "data", "ql PODD1442-A.json");
+  const suiteQlPath =
+    process.env.SUITEQL_PATH ||
+    path.join(__dirname, "..", "data", "invoice 1442-A.json");
 
   workspace.loadPayloadFromFile(payloadPath);
   workspace.loadSuiteQlFromFile(suiteQlPath);
 
   workspace.addMappingStep({
-    id: 'orderSummary',
-    description: 'Align order identity and totals',
+    id: "orderSummary",
+    description: "Align order identity and totals",
     transform: ({ payload, suiteQlResult }) => {
       const order = payload.order || {};
       const suiteOrder = suiteQlResult.rows?.[0] || {};
@@ -30,8 +34,8 @@ function run() {
   });
 
   workspace.addMappingStep({
-    id: 'lineItems',
-    description: 'Compare line items by sku',
+    id: "lineItems",
+    description: "Compare line items by sku",
     transform: ({ payload, suiteQlResult }) => {
       const payloadLines = payload.lines || [];
       const suiteLines = suiteQlResult.lines || [];
@@ -50,10 +54,10 @@ function run() {
   });
 
   const results = workspace.runMappings();
-  logger.info('Mapping results ready', results);
+  logger.info("Mapping results ready", results);
 
   const structuralDiff = workspace.summarizeDifferences();
-  logger.info('Structural comparison complete', structuralDiff);
+  logger.info("Structural comparison complete", structuralDiff);
 
   return { results, structuralDiff };
 }

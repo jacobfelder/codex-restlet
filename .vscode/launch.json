@@ -8,8 +8,6 @@
       "program": "${workspaceFolder}/src/index.js",
       "cwd": "${workspaceFolder}",
       "env": {
-        // "PAYLOAD_PATH": "${workspaceFolder}/data/sample-payload.json",
-        // "SUITEQL_PATH": "${workspaceFolder}/data/sample-suiteql.json",
         "PAYLOAD_PATH": "${workspaceFolder}/data/invoice 1442-A.json",
         "SUITEQL_PATH": "${workspaceFolder}/data/ql PODD1442-A.json",
         "LOG_LEVEL": "debug"
