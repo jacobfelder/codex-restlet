@@ -11,6 +11,8 @@ const qlJSON = fs.readFileSync("./ql PO1443.json", "utf8");
 //console.log(jsonText);
 //console.log(payloadObj);
 
+//minor change to test git
+
 const InvoiceObj = JSON.parse(jsonText);
 const qlObj = JSON.parse(qlJSON);
 
