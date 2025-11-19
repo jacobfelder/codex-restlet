@@ -1,0 +1,185 @@
+{
+   "tranid": "PO1443",
+   "tranDate": "2025-11-18T00:00:00-05:00",
+   "memo": "",
+   "custbody_cci_dedicated_payment": false,
+   "externalId": "COUPA-INV-374090",
+   "entity": {
+      "payablesAccount": {},
+      "externalId": "11114"
+   },
+   "subsidiary": {
+      "name": "Danthonia Designs",
+      "custrecord_cci_req_tax_on_integ_bills": true,
+      "externalId": "133",
+      "id": 2,
+      "lastModifiedDate": "2025-07-03T21:39:00+00:00",
+      "links": [
+         {
+            "rel": "self",
+            "href": "https://9730402-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/subsidiary/eid:133?expandSubResources=true"
+         }
+      ]
+   },
+   "terms": {
+      "externalId": "NET 30"
+   },
+   "currency": {
+      "externalId": "AUD"
+   },
+   "customForm": {
+      "id": 456
+   },
+   "expense": {
+      "items": []
+   },
+   "item": {
+      "items": [
+         {
+            "amount": 111.9,
+            "memo": "",
+            "quantity": 2,
+            "item": {
+               "id": 7054
+            },
+            "location": {
+               "id": "1"
+            },
+            "orderDoc": {
+               "id": 731384
+            },
+            "orderLine": 1,
+            "account": {
+               "externalId": "14000"
+            },
+            "department": {
+               "externalId": "168"
+            },
+            "cseg_cci_location": {
+               "externalId": "118"
+            },
+            "custcol_cci_ext_taxcode": {
+               "externalid": "AU GST"
+            },
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 11.19
+         },
+         {
+            "amount": 167.97,
+            "memo": "",
+            "quantity": 1,
+            "item": {
+               "id": 5900
+            },
+            "location": {
+               "id": "1"
+            },
+            "orderDoc": {
+               "id": 731384
+            },
+            "orderLine": 2,
+            "account": {
+               "externalId": "14000"
+            },
+            "department": {
+               "externalId": "168"
+            },
+            "cseg_cci_location": {
+               "externalId": "118"
+            },
+            "custcol_cci_ext_taxcode": {
+               "externalid": "AU GST"
+            },
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 16.8
+         },
+         {
+            "amount": 168.8,
+            "memo": "",
+            "quantity": 1,
+            "item": {
+               "id": 5657
+            },
+            "location": {
+               "id": "1"
+            },
+            "orderDoc": {
+               "id": 731384
+            },
+            "orderLine": 3,
+            "account": {
+               "externalId": "14000"
+            },
+            "department": {
+               "externalId": "168"
+            },
+            "cseg_cci_location": {
+               "externalId": "118"
+            },
+            "custcol_cci_ext_taxcode": {
+               "externalid": "AU GST"
+            },
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 16.88
+         },
+         {
+            "amount": 220,
+            "memo": "",
+            "quantity": 2,
+            "item": {
+               "id": 5686
+            },
+            "location": {
+               "id": "1"
+            },
+            "orderDoc": {
+               "id": 731384
+            },
+            "orderLine": 4,
+            "account": {
+               "externalId": "14000"
+            },
+            "department": {
+               "externalId": "168"
+            },
+            "cseg_cci_location": {
+               "externalId": "118"
+            },
+            "custcol_cci_ext_taxcode": {
+               "externalid": "AU GST"
+            },
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 22
+         },
+         {
+            "amount": 107.55,
+            "memo": "",
+            "quantity": 1,
+            "item": {
+               "id": 7322
+            },
+            "location": {
+               "id": "1"
+            },
+            "orderDoc": {
+               "id": 731384
+            },
+            "orderLine": 5,
+            "account": {
+               "externalId": "14000"
+            },
+            "department": {
+               "externalId": "168"
+            },
+            "cseg_cci_location": {
+               "externalId": "118"
+            },
+            "custcol_cci_ext_taxcode": {
+               "externalid": "AU GST"
+            },
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 10.75
+         }
+      ]
+   }
+}

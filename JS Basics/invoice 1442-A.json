@@ -1,0 +1,34 @@
+{
+   "tranid": "PODD1442-A",
+   "tranDate": "2025-11-16T00:00:00-05:00",
+   "memo": "",
+   "custbody_cci_dedicated_payment": false,
+   "externalId": "COUPA-INV-374084",
+   "entity": {  "externalId": "11114"},
+   "subsidiary": {"externalId": "133"},
+   "terms": {"externalId": "NET 30"   },
+   "currency": {"externalId": "AUD"   },
+   "customForm": {"id": 456   },
+   "expense": {
+      "items": []
+   },
+   "item": {
+      "items": [
+         {
+            "amount": 3.8,
+            "memo": "",
+            "quantity": 20,
+            "item": {"id": 2050},
+            "location": {"id": "1"},
+            "orderDoc": {"id": 730877},
+            "orderLine": 1,
+            "account": {"externalId": "14000"},
+            "department": {"externalId": "168"},
+            "cseg_cci_location": {"externalId": "118"},
+            "custcol_cci_ext_taxcode": {"externalid": "AU GST"},
+            "custcol_cci_ext_taxrate": 10,
+            "custcol_cci_ext_taxamount": 0.38
+         }
+      ]
+   }
+}
