@@ -58,7 +58,9 @@
             "cseg_cci_location": {
                "externalId": "118"
             },
+            "order-line-num": "731384_1",
             "custcol_cci_ext_taxcode": {
+               "id": 26,
                "externalid": "AU GST"
             },
             "custcol_cci_ext_taxrate": 10,
@@ -87,7 +89,9 @@
             "cseg_cci_location": {
                "externalId": "118"
             },
+            "order-line-num": "731384_2",
             "custcol_cci_ext_taxcode": {
+               "id": 26,
                "externalid": "AU GST"
             },
             "custcol_cci_ext_taxrate": 10,
@@ -113,10 +117,12 @@
             "department": {
                "externalId": "168"
             },
+            "order-line-num": "731384_3",            
             "cseg_cci_location": {
                "externalId": "118"
             },
             "custcol_cci_ext_taxcode": {
+               "id": 26,
                "externalid": "AU GST"
             },
             "custcol_cci_ext_taxrate": 10,
@@ -145,7 +151,9 @@
             "cseg_cci_location": {
                "externalId": "118"
             },
+            "order-line-num": "731384_4",            
             "custcol_cci_ext_taxcode": {
+               "id": 26,
                "externalid": "AU GST"
             },
             "custcol_cci_ext_taxrate": 10,
@@ -174,7 +182,9 @@
             "cseg_cci_location": {
                "externalId": "118"
             },
+            "order-line-num": "731384_5",            
             "custcol_cci_ext_taxcode": {
+               "id": 26,
                "externalid": "AU GST"
             },
             "custcol_cci_ext_taxrate": 10,

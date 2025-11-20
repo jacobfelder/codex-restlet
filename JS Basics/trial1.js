@@ -39,7 +39,8 @@ const LINE_FIELDS = [
   { path: "department.externalId", type: "string" },
   { path: "cseg_cci_location.externalId", type: "string" },
   //{ path: "custcol_cci_ext_taxcode.externalId", type: "string" },
-  //this needs to be added to the json  { path: "custcol_cci_ext_taxcode.id", type: "integer" },
+  //this needs to be added to the json
+  { path: "custcol_cci_ext_taxcode.id", type: "integer" },
   { path: "custcol_cci_ext_taxrate", type: "integer" },
   { path: "custcol_cci_ext_taxamount", type: "integer" },
 ];
@@ -65,7 +66,14 @@ function mapSuiteQLToIncomingShape(rows) {
   };
 }
 
-compareHeaders(InvoiceObj, mappedFromSuiteQL);
+//old compareHeaders(InvoiceObj, mappedFromSuiteQL);
+//compareHeaders(InvoiceObj, mappedFromSuiteQL);
+
+const headerComparison = compareHeaders(InvoiceObj, mappedFromSuiteQL);
+//const lineComparison = compareLines(InvoiceObj, mappedFromSuiteQL);
+
+console.log("Header comparison:", headerComparison);
+//console.log("Line comparison:", lineComparison);
 
 ///mapping header fields from QL into Obj
 
@@ -128,8 +136,9 @@ function mapLinesFromSuiteQL(rows) {
       cseg_cci_location: {
         externalId: row.cci_locationexternalid,
       },
+      orderlinenumber: row.coupaorderlinenumber,
       custcol_cci_ext_taxcode: {
-        externalid: "Not avail in QL",
+        //externalid: "Not avail in QL",
         id: row.taxcodeid,
       },
       custcol_cci_ext_taxrate: taxRateFractionToPercent(row.taxrate),
@@ -138,40 +147,52 @@ function mapLinesFromSuiteQL(rows) {
   });
 }
 
+//old version
+// function compareHeaders(incoming, suiteQLMapped) {
+//   const differences = [];
+
+//   for (const field of HEADER_FIELDS) {
+//     console.log("Evaluating: " + field.path);
+
+//     const invoiceRaw = getByPath(incoming, field.path);
+//     const qlRaw = getByPath(suiteQLMapped, field.path);
+//     // const areEqual = invoiceRaw === qlRaw || (invoiceRaw == null && qlRaw == null); // treat null/undefined as equivalent
+
+//     const invoiceNorm = normalize(invoiceRaw, field.type);
+//     const qlNorm = normalize(qlRaw, field.type);
+
+//     const areEqual =
+//       invoiceNorm === qlNorm || (invoiceNorm == null && qlNorm == null);
+
+//     console.log(
+//       `  Invoice: ${JSON.stringify(invoiceRaw)}\n` +
+//         `  QL:      ${JSON.stringify(qlRaw)}\n`
+//     );
+
+//     if (!areEqual) {
+//       differences.push({
+//         path: field.path,
+//         invoice: invoiceRaw,
+//         ql: qlRaw,
+//       });
+//       console.log("❌ MISMATCH");
+//     } else {
+//       console.log("✅ MATCH");
+//     }
+
+//     console.log("-------------------next-----------------");
+//   }
+
+//   return {
+//     isEqual: differences.length === 0,
+//     differences,
+//   };
+// }
+
+//functions
+
 function compareHeaders(incoming, suiteQLMapped) {
-  const differences = [];
-
-  for (const field of HEADER_FIELDS) {
-    console.log("Evaluating: " + field.path);
-
-    const invoiceRaw = getByPath(incoming, field.path);
-    const qlRaw = getByPath(suiteQLMapped, field.path);
-    // const areEqual = invoiceRaw === qlRaw || (invoiceRaw == null && qlRaw == null); // treat null/undefined as equivalent
-
-    const invoiceNorm = normalize(invoiceRaw, field.type);
-    const qlNorm = normalize(qlRaw, field.type);
-
-    const areEqual =
-      invoiceNorm === qlNorm || (invoiceNorm == null && qlNorm == null);
-
-    console.log(
-      `  Invoice: ${JSON.stringify(invoiceRaw)}\n` +
-        `  QL:      ${JSON.stringify(qlRaw)}\n`
-    );
-
-    if (!areEqual) {
-      differences.push({
-        path: field.path,
-        invoice: invoiceRaw,
-        ql: qlRaw,
-      });
-      console.log("❌ MISMATCH");
-    } else {
-      console.log("✅ MATCH");
-    }
-
-    console.log("-------------------next-----------------");
-  }
+  const differences = compareFieldSet(incoming, suiteQLMapped, HEADER_FIELDS);
 
   return {
     isEqual: differences.length === 0,
@@ -179,7 +200,6 @@ function compareHeaders(incoming, suiteQLMapped) {
   };
 }
 
-//functions
 function mapBoolean(value) {
   // "T"/"F" => true/false, null/undefined => false
   return value === "T";
@@ -263,4 +283,48 @@ function normalizeDate(value) {
 
   // If parsing failed → return value unchanged
   return value;
+}
+
+function compareFieldSet(
+  invoiceSource,
+  suiteQLSource,
+  fields,
+  pathPrefix = ""
+) {
+  const differences = [];
+
+  for (const field of fields) {
+    const fullPath = pathPrefix + field.path;
+    console.log("Evaluating: " + fullPath);
+
+    const invoiceRaw = getByPath(invoiceSource, field.path);
+    const suiteQLRaw = getByPath(suiteQLSource, field.path);
+
+    const invoiceNormalized = normalize(invoiceRaw, field.type);
+    const suiteQLNormalized = normalize(suiteQLRaw, field.type);
+
+    const areEqual =
+      invoiceNormalized === suiteQLNormalized ||
+      (invoiceNormalized == null && suiteQLNormalized == null);
+
+    console.log(
+      `  Invoice: ${JSON.stringify(invoiceRaw)}\n` +
+        `  QL:      ${JSON.stringify(suiteQLRaw)}\n`
+    );
+
+    if (!areEqual) {
+      differences.push({
+        path: fullPath,
+        invoice: invoiceRaw,
+        ql: suiteQLRaw,
+      });
+      console.log("❌ MISMATCH");
+    } else {
+      console.log("✅ MATCH");
+    }
+
+    console.log("-------------------next-----------------");
+  }
+
+  return differences;
 }
