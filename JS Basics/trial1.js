@@ -70,10 +70,10 @@ function mapSuiteQLToIncomingShape(rows) {
 //compareHeaders(InvoiceObj, mappedFromSuiteQL);
 
 const headerComparison = compareHeaders(InvoiceObj, mappedFromSuiteQL);
-//const lineComparison = compareLines(InvoiceObj, mappedFromSuiteQL);
+const lineComparison = compareLines(InvoiceObj, mappedFromSuiteQL);
 
 console.log("Header comparison:", headerComparison);
-//console.log("Line comparison:", lineComparison);
+console.log("Line comparison:", lineComparison);
 
 ///mapping header fields from QL into Obj
 
@@ -197,6 +197,58 @@ function compareHeaders(incoming, suiteQLMapped) {
   return {
     isEqual: differences.length === 0,
     differences,
+  };
+}
+
+function compareLines(incoming, suiteQLMapped) {
+  const invoiceLines =
+    incoming.item && Array.isArray(incoming.item.items)
+      ? incoming.item.items
+      : [];
+
+  const suiteQLLines =
+    suiteQLMapped.item && Array.isArray(suiteQLMapped.item.items)
+      ? suiteQLMapped.item.items
+      : [];
+
+  // Build dictionaries keyed by order-line-num
+  const invoiceDict = indexLinesByOrderLineNum(invoiceLines, true);
+  const suiteQLDict = indexLinesByOrderLineNum(suiteQLLines, false);
+
+  const allKeys = new Set([
+    ...Object.keys(invoiceDict),
+    ...Object.keys(suiteQLDict),
+  ]);
+
+  const allDifferences = [];
+
+  for (const key of allKeys) {
+    const invoiceLine = invoiceDict[key];
+    const suiteQLLine = suiteQLDict[key];
+
+    if (!invoiceLine || !suiteQLLine) {
+      allDifferences.push({
+        path: `item.items[key=${key}]`,
+        invoice: invoiceLine,
+        ql: suiteQLLine,
+      });
+      console.log(`Line ${key}: one side missing`);
+      continue;
+    }
+
+    const diffs = compareFieldSet(
+      invoiceLine,
+      suiteQLLine,
+      LINE_FIELDS,
+      `item.items[order-line-num=${key}].`
+    );
+
+    allDifferences.push(...diffs);
+  }
+
+  return {
+    isEqual: allDifferences.length === 0,
+    differences: allDifferences,
   };
 }
 
@@ -327,4 +379,20 @@ function compareFieldSet(
   }
 
   return differences;
+}
+
+function indexLinesByOrderLineNum(lines, invoiceMode = false) {
+  const dict = {};
+
+  for (const line of lines) {
+    if (!line) continue;
+
+    const key = invoiceMode ? line["order-line-num"] : line.orderlinenumber;
+
+    if (key != null) {
+      dict[key] = line;
+    }
+  }
+
+  return dict;
 }
