@@ -24,19 +24,19 @@ const HEADER_FIELDS = [
 ];
 
 const LINE_FIELDS = [
-  { path: "amount", type: "integer" },
-  { path: "quantity", type: "integer" },
-  { path: "item.id", type: "integer" },
-  { path: "location.id", type: "integer" },
-  { path: "orderDoc.id", type: "integer" },
-  { path: "orderLine", type: "integer" },
+  { path: "amount", type: "number" },
+  { path: "quantity", type: "number" },
+  { path: "item.id", type: "number" },
+  { path: "location.id", type: "number" },
+  { path: "orderDoc.id", type: "number" },
+  { path: "orderLine", type: "number" },
   { path: "account.externalId", type: "string" },
   { path: "department.externalId", type: "string" },
   { path: "cseg_cci_location.externalId", type: "string" },
-  //taxcode.id needs to be added to the json
-  { path: "custcol_cci_ext_taxcode.id", type: "integer" },
-  { path: "custcol_cci_ext_taxrate", type: "integer" },
-  { path: "custcol_cci_ext_taxamount", type: "integer" },
+  //taxcode.id needs to be added to the incoming json - CCINSAU
+  { path: "custcol_cci_ext_taxcode.id", type: "number" },
+  { path: "custcol_cci_ext_taxrate", type: "number" },
+  { path: "custcol_cci_ext_taxamount", type: "number" },
 ];
 
 const mappedFromSuiteQL = mapSuiteQLToIncomingShape(qlObj);
@@ -227,7 +227,6 @@ function normalize(value, type) {
         return value.toUpperCase() === "T";
       }
       return Boolean(value);
-    case "integer":
     case "number":
       const num = Number(value);
       return isNaN(num) ? value : num;
@@ -264,7 +263,6 @@ function compareFieldSet(
 
   for (const field of fields) {
     const fullPath = pathPrefix + field.path;
-    console.log("Evaluating: " + fullPath);
 
     const invoiceRaw = getByPath(invoiceSource, field.path);
     const suiteQLRaw = getByPath(suiteQLSource, field.path);
@@ -276,9 +274,10 @@ function compareFieldSet(
       invoiceNormalized === suiteQLNormalized ||
       (invoiceNormalized == null && suiteQLNormalized == null);
 
+    console.log("Evaluating: " + fullPath);
     console.log(
-      `  Invoice: ${JSON.stringify(invoiceRaw)}\n` +
-        `  QL:      ${JSON.stringify(suiteQLRaw)}\n`
+      `  IncomingCoupaInvoice: ${JSON.stringify(invoiceRaw)}\n` +
+        `  NetSuite data via QL: ${JSON.stringify(suiteQLRaw)}\n`
     );
 
     if (!areEqual) {
