@@ -414,25 +414,77 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         ? suiteQLMapped.item.items
         : [];
 
-    const invoiceDict = indexLinesByOrderLineNum(invoiceLines, true);
-    const suiteQLDict = indexLinesByOrderLineNum(suiteQLLines, false);
-
-    const allKeys = new Set([
-      ...Object.keys(invoiceDict),
-      ...Object.keys(suiteQLDict),
-    ]);
-
     const allDifferences = [];
 
-    allKeys.forEach((key) => {
-      const invoiceLine = invoiceDict[key];
-      const suiteQLLine = suiteQLDict[key];
+    // 1) For each invoice line, find matching SuiteQL line by coupaOrderLineNumber
+    for (const invoiceLine of invoiceLines) {
+      if (!invoiceLine) continue;
 
-      // completely missing on one side
-      if (!invoiceLine || !suiteQLLine) {
+      const key = invoiceLine.coupaOrderLineNumber;
+
+      // If the key itself is missing on the invoice line, treat as presence mismatch
+      if (key == null) {
         const diff = {
-          path: `item.items[order-line-num=${key}]`,
+          path: `item.items[coupaOrderLineNumber=?]`,
           invoice: invoiceLine,
+          ql: null,
+        };
+
+        allDifferences.push(diff);
+
+        log.debug({
+          title: "LINE_PRESENCE_MISMATCH",
+          details: JSON.stringify(diff),
+        });
+
+        continue;
+      }
+
+      const suiteQLLine = suiteQLLines.find(
+        (l) => l && l.coupaOrderLineNumber === key
+      );
+
+      // No matching SuiteQL line → presence mismatch
+      if (!suiteQLLine) {
+        const diff = {
+          path: `item.items[coupaOrderLineNumber=${key}]`,
+          invoice: invoiceLine,
+          ql: null,
+        };
+
+        allDifferences.push(diff);
+
+        log.debug({
+          title: "LINE_PRESENCE_MISMATCH",
+          details: JSON.stringify(diff),
+        });
+
+        continue;
+      }
+
+      // Matching line found → compare individual fields
+      const lineDiffs = compareFieldSet(
+        invoiceLine,
+        suiteQLLine,
+        LINE_FIELDS,
+        `item.items[coupaOrderLineNumber=${key}].`
+      );
+
+      if (lineDiffs && lineDiffs.length > 0) {
+        Array.prototype.push.apply(allDifferences, lineDiffs);
+      }
+    }
+
+    // 2) Check for SuiteQL lines that have no matching invoice line
+    for (const suiteQLLine of suiteQLLines) {
+      if (!suiteQLLine) continue;
+
+      const key = suiteQLLine.coupaOrderLineNumber;
+
+      if (key == null) {
+        const diff = {
+          path: `item.items[coupaOrderLineNumber=?]`,
+          invoice: null,
           ql: suiteQLLine,
         };
 
@@ -443,21 +495,28 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
           details: JSON.stringify(diff),
         });
 
-        return;
+        continue;
       }
 
-      // compare individual fields on that line
-      const lineDiffs = compareFieldSet(
-        invoiceLine,
-        suiteQLLine,
-        LINE_FIELDS,
-        `item.items[order-line-num=${key}].`
+      const invoiceLine = invoiceLines.find(
+        (l) => l && l.coupaOrderLineNumber === key
       );
 
-      if (lineDiffs && lineDiffs.length > 0) {
-        Array.prototype.push.apply(allDifferences, lineDiffs);
+      if (!invoiceLine) {
+        const diff = {
+          path: `item.items[coupaOrderLineNumber=${key}]`,
+          invoice: null,
+          ql: suiteQLLine,
+        };
+
+        allDifferences.push(diff);
+
+        log.debug({
+          title: "LINE_PRESENCE_MISMATCH",
+          details: JSON.stringify(diff),
+        });
       }
-    });
+    }
 
     return {
       isEqual: allDifferences.length === 0,
