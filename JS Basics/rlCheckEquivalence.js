@@ -70,13 +70,12 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       const tranId = payload.tranid;
 
-      let fileRows = getQLrows();
-
-      // ----- mapping ----- //
-
+      // ----- SuiteQL ----- //
+      const fileRows = getQLrows(tranId);
       const noVendorBillFound = !fileRows || fileRows.length === 0;
 
-      let mappedFromSuiteQL = getVendorbillObj(fileRows);
+      // ----- mapping ----- //
+      const mappedFromSuiteQL = getVendorbillObj(fileRows);
 
       // ----- comparison ----- //
       let comparisonResult = null;
@@ -120,17 +119,31 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       const durationMs = end - start;
       log.debug({ title: "Load Duration (ms)", details: durationMs });
 
-      // normal success path – status + mismatches (if any)
-      //I want to improve this to only show differences if there are any
-      return makeResponse(true, {
+      // build response payload
+      const responsePayload = {
         message: "Restlet ran successfully",
         isEquivalent: comparisonResult ? comparisonResult.isEquivalent : false,
-        headerDifferences:
-          (comparisonResult && comparisonResult.headerDifferences) || [],
-        lineDifferences:
-          (comparisonResult && comparisonResult.lineDifferences) || [],
         durationMs,
-      });
+      };
+
+      // only include differences if there are any
+      if (
+        comparisonResult &&
+        comparisonResult.headerDifferences &&
+        comparisonResult.headerDifferences.length > 0
+      ) {
+        responsePayload.headerDifferences = comparisonResult.headerDifferences;
+      }
+
+      if (
+        comparisonResult &&
+        comparisonResult.lineDifferences &&
+        comparisonResult.lineDifferences.length > 0
+      ) {
+        responsePayload.lineDifferences = comparisonResult.lineDifferences;
+      }
+
+      return makeResponse(true, responsePayload);
     } catch (e) {
       log.error({
         title: "POST_ERROR",
@@ -167,9 +180,10 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       if (acc == null) return undefined;
       return acc[key];
     }, obj);
+
   //-------------------------QL work-----------------
 
-  const getQLrows = () => {
+  const getQLrows = (tranId) => {
     try {
       const fileSql = loadSqlFromFile(SQL_FILE_ID);
       const fileResultSet = query.runSuiteQL({
@@ -177,20 +191,22 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         params: [tranId],
       });
 
-      fileRows = fileResultSet.asMappedResults();
+      const rows = fileResultSet.asMappedResults() || [];
 
-      if (!fileRows || fileRows.length === 0) {
+      if (!rows || rows.length === 0) {
         log.audit({
           title: "QL Msg",
           details: `No rows returned from SuiteQL query (tranid:${tranId})`,
         });
       } else {
-        //log.debug({ title: 'QL Results', details: JSON.stringify(fileRows) });
+        //log.debug({ title: 'QL Results', details: JSON.stringify(rows) });
         log.debug({
           title: "QL Results",
           details: `Retrieved VB data from NetSuite for TranId ${tranId}`,
         });
       }
+
+      return rows;
     } catch (fileErr) {
       log.error({
         title: "FILE_SQL_ERROR",
@@ -200,32 +216,38 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
           stack: fileErr && fileErr.stack,
         }),
       });
+
+      // On error, treat as "no rows" so caller can decide what to do
+      return [];
     }
   };
 
-  const getVendorbillObj = (fileRows) =>{
-    if(!fileRows || fileRows.length === 0)
-      {
-            try {
-          mappedFromSuiteQL = mapSuiteQLToIncomingShape(fileRows);
-          //log.debug({ title: "MAPPED_FROM_SUITEQL", details: JSON.stringify(mappedFromSuiteQL) });
-        } catch (mapErr) {
-          log.error({
-            title: "MAPPING_ERROR",
-            details: JSON.stringify({
-              name: mapErr && mapErr.name,
-              message: mapErr && mapErr.message,
-              stack: mapErr && mapErr.stack,
-            }),
-          });
-        }
-      } else {
-        log.debug({
-          title: "MAPPING_SKIPPED",
-          details: "Mapping step skipped because SuiteQL returned no rows.",
-        });
+  const getVendorbillObj = (fileRows) => {
+    if (!fileRows || fileRows.length === 0) {
+      log.debug({
+        title: "MAPPING_SKIPPED",
+        details: "Mapping step skipped because SuiteQL returned no rows.",
+      });
+      return null;
+    }
 
-  }
+    try {
+      const mappedFromSuiteQL = mapSuiteQLToIncomingShape(fileRows);
+      //log.debug({ title: "MAPPED_FROM_SUITEQL", details: JSON.stringify(mappedFromSuiteQL) });
+      return mappedFromSuiteQL;
+    } catch (mapErr) {
+      log.error({
+        title: "MAPPING_ERROR",
+        details: JSON.stringify({
+          name: mapErr && mapErr.name,
+          message: mapErr && mapErr.message,
+          stack: mapErr && mapErr.stack,
+        }),
+      });
+      return null;
+    }
+  };
+
   // ------------------ mapping helpers ------------------ //
 
   const mapHeaderFromSuiteQL = (rows) => {
