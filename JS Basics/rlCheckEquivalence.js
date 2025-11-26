@@ -174,6 +174,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       log.debug({ title: "Load Duration (ms)", details: durationMs });
 
       // normal success path – status + mismatches (if any)
+      //I want to improve this to only show differences if there are any
       return makeResponse(true, {
         message: "Restlet ran successfully",
         isEquivalent: comparisonResult ? comparisonResult.isEquivalent : false,
