@@ -70,66 +70,13 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       const tranId = payload.tranid;
 
-      let fileRows = [];
-      try {
-        const fileSql = loadSqlFromFile(SQL_FILE_ID);
-        const fileResultSet = query.runSuiteQL({
-          query: fileSql,
-          params: [tranId],
-        });
+      let fileRows = getQLrows();
 
-        fileRows = fileResultSet.asMappedResults();
-
-        if (!fileRows || fileRows.length === 0) {
-          log.debug({
-            title: "QL Msg",
-            details: `No rows returned from SuiteQL query (tranid:${tranId})`,
-          });
-        } else {
-          //log.debug({ title: 'QL Results', details: JSON.stringify(fileRows) });
-          log.debug({
-            title: "QL Results",
-            details: `Retrieved VB data from NetSuite for TranId ${tranId}`,
-          });
-        }
-      } catch (fileErr) {
-        log.error({
-          title: "FILE_SQL_ERROR",
-          details: JSON.stringify({
-            name: fileErr && fileErr.name,
-            message: fileErr && fileErr.message,
-            stack: fileErr && fileErr.stack,
-          }),
-        });
-      }
+      // ----- mapping ----- //
 
       const noVendorBillFound = !fileRows || fileRows.length === 0;
 
-      // ----- mapping ----- //
-      let mappedFromSuiteQL = null;
-      if (!noVendorBillFound) {
-        try {
-          mappedFromSuiteQL = mapSuiteQLToIncomingShape(fileRows);
-          log.debug({
-            title: "MAPPED_FROM_SUITEQL",
-            details: JSON.stringify(mappedFromSuiteQL),
-          });
-        } catch (mapErr) {
-          log.error({
-            title: "MAPPING_ERROR",
-            details: JSON.stringify({
-              name: mapErr && mapErr.name,
-              message: mapErr && mapErr.message,
-              stack: mapErr && mapErr.stack,
-            }),
-          });
-        }
-      } else {
-        log.debug({
-          title: "MAPPING_SKIPPED",
-          details: "Mapping step skipped because SuiteQL returned no rows.",
-        });
-      }
+      let mappedFromSuiteQL = getVendorbillObj(fileRows);
 
       // ----- comparison ----- //
       let comparisonResult = null;
@@ -220,7 +167,65 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       if (acc == null) return undefined;
       return acc[key];
     }, obj);
+  //-------------------------QL work-----------------
 
+  const getQLrows = () => {
+    try {
+      const fileSql = loadSqlFromFile(SQL_FILE_ID);
+      const fileResultSet = query.runSuiteQL({
+        query: fileSql,
+        params: [tranId],
+      });
+
+      fileRows = fileResultSet.asMappedResults();
+
+      if (!fileRows || fileRows.length === 0) {
+        log.audit({
+          title: "QL Msg",
+          details: `No rows returned from SuiteQL query (tranid:${tranId})`,
+        });
+      } else {
+        //log.debug({ title: 'QL Results', details: JSON.stringify(fileRows) });
+        log.debug({
+          title: "QL Results",
+          details: `Retrieved VB data from NetSuite for TranId ${tranId}`,
+        });
+      }
+    } catch (fileErr) {
+      log.error({
+        title: "FILE_SQL_ERROR",
+        details: JSON.stringify({
+          name: fileErr && fileErr.name,
+          message: fileErr && fileErr.message,
+          stack: fileErr && fileErr.stack,
+        }),
+      });
+    }
+  };
+
+  const getVendorbillObj = (fileRows) =>{
+    if(!fileRows || fileRows.length === 0)
+      {
+            try {
+          mappedFromSuiteQL = mapSuiteQLToIncomingShape(fileRows);
+          //log.debug({ title: "MAPPED_FROM_SUITEQL", details: JSON.stringify(mappedFromSuiteQL) });
+        } catch (mapErr) {
+          log.error({
+            title: "MAPPING_ERROR",
+            details: JSON.stringify({
+              name: mapErr && mapErr.name,
+              message: mapErr && mapErr.message,
+              stack: mapErr && mapErr.stack,
+            }),
+          });
+        }
+      } else {
+        log.debug({
+          title: "MAPPING_SKIPPED",
+          details: "Mapping step skipped because SuiteQL returned no rows.",
+        });
+
+  }
   // ------------------ mapping helpers ------------------ //
 
   const mapHeaderFromSuiteQL = (rows) => {
