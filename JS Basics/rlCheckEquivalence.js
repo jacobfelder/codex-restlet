@@ -264,9 +264,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       tranid: first.tranid,
       tranDate: first.trandatechar,
       memo: potentialNull(first.invoicememo),
-      custbody_cci_dedicated_payment: mapBoolean(
-        first.custbody_cci_dedicated_payment
-      ),
+      custbody_cci_dedicated_payment: first.custbody_cci_dedicated_payment,
       externalId: first.externalid,
       entity: {
         externalId: first.vendorexternalid,
@@ -307,7 +305,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         externalId: row.cci_locationexternalid,
       },
       // Coupa order line number key
-      orderlinenumber: row.coupaorderlinenumber,
+      coupaorderlinenumber: row.coupaorderlinenumber,
       custcol_cci_ext_taxcode: {
         // externalid not available in SuiteQL, only id
         id: row.taxcodeid,
@@ -374,22 +372,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     return differences;
   };
 
-  const indexLinesByOrderLineNum = (lines, invoiceMode) => {
-    const dict = {};
-    if (!lines) return dict;
-
-    for (const line of lines) {
-      if (!line) continue;
-
-      const key = invoiceMode ? line["order-line-num"] : line.orderlinenumber;
-      if (key == null) continue;
-
-      dict[key] = line;
-    }
-
-    return dict;
-  };
-
   const compareHeaders = (incoming, suiteQLMapped) => {
     const differences = compareFieldSet(
       incoming,
@@ -401,6 +383,80 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       isEqual: differences.length === 0,
       differences,
     };
+  };
+
+  const compareLines = (incoming, suiteQLMapped) => {
+    const invoiceLines =
+      incoming.item && Array.isArray(incoming.item.items)
+        ? incoming.item.items
+        : [];
+
+    const suiteQLLines =
+      suiteQLMapped.item && Array.isArray(suiteQLMapped.item.items)
+        ? suiteQLMapped.item.items
+        : [];
+
+    const differences = [];
+
+    //loop QL lines, find matching invoice line, compare
+    for (const qlLine of suiteQLLines) {
+      if (!qlLine) continue;
+
+      const key = qlLine.coupaorderlinenumber;
+      const invoiceLine = findLineByCoupaOrderLineNumber(invoiceLines, key);
+
+      if (!invoiceLine) {
+        // exists only in QL
+        differences.push({
+          path: `item.items[coupaorderlinenumber=${key}]`,
+          message: `This line only exists in the QL result set.`,
+        });
+        continue;
+      }
+
+      const lineDiffs = compareFieldSet(
+        invoiceLine,
+        qlLine,
+        LINE_FIELDS,
+        `item.items[coupaorderlinenumber=${key}].`
+      );
+
+      if (lineDiffs && lineDiffs.length > 0) {
+        differences.push(...lineDiffs);
+      }
+    }
+
+    for (const invoiceLine of invoiceLines) {
+      if (!invoiceLine) continue;
+
+      const key = invoiceLine.coupaorderlinenumber;
+      const qlLine = findLineByCoupaOrderLineNumber(suiteQLLines, key);
+
+      if (!qlLine) {
+        differences.push({
+          path: `item.items[coupaorderlinenumber=${key}]`,
+          message: `This line only exists in the incoming JSON payload.`,
+        });
+      }
+    }
+
+    return {
+      isEqual: differences.length === 0,
+      differences,
+    };
+  };
+
+  const findLineByCoupaOrderLineNumber = (lines, coupaOrderLineNumber) => {
+    if (!Array.isArray(lines)) return null;
+
+    for (const line of lines) {
+      if (!line) continue;
+      if (line.coupaorderlinenumber === coupaOrderLineNumber) {
+        return line;
+      }
+    }
+
+    return null;
   };
 
   //--------------------------normalizers-------------------------
@@ -420,6 +476,12 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         // no normalization for strings (for now)
         return value;
     }
+  };
+
+  const potentialNull = (value) => {
+    // Treat undefined / empty string as null for cleaner comparisons
+    if (value == null || value === "") return null;
+    return value;
   };
 
   const normalizeBoolean = (value) => {
