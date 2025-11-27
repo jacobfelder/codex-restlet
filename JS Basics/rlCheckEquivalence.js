@@ -157,37 +157,24 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       return makeResponse(true, responsePayload);
     } catch (e) {
-      log.error({
-        title: "POST_ERROR",
-        details: e && e.message ? `${e.name || "ERROR"}: ${e.message}` : e,
-      });
-
-      // Validation errors → GENERAL_ERROR with isOK = false
-      if (e && e.name === "VALIDATION_ERROR") {
-        return makeResponse(false, {
-          status: "GENERAL_ERROR",
-          message: e.message,
-        });
-      }
-
-      // Known internal pipeline errors → surfaced with status, but isOK = true
-      if (
+      const isKnownInternalError =
         e &&
         (e.name === "QL_ERROR" ||
           e.name === "MAPPING_ERROR" ||
-          e.name === "COMPARISON_ERROR")
-      ) {
-        return makeResponse(true, {
-          status: e.name,
-          message: e.message || "An error occurred.",
-          isEquivalent: false,
-        });
-      }
+          e.name === "VALIDATION_ERROR" ||
+          e.name === "COMPARISON_ERROR");
 
-      // Fallback for any other unexpected error
+      const status = isKnownInternalError ? e.name : "GENERAL_ERROR";
+
+      log.error({
+        title: status,
+        details: e && e.message ? `${status}: ${e.message}` : e,
+      });
+
       return makeResponse(false, {
-        status: "GENERAL_ERROR",
+        status,
         message: e && e.message ? e.message : "Unexpected error.",
+        isEquivalent: false,
       });
     }
   };
@@ -249,15 +236,13 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       return rows;
     } catch (fileErr) {
       log.error({
-        title: "FILE_QL_ERROR",
+        title: "QL_ERROR",
         details: JSON.stringify({
           name: fileErr && fileErr.name,
           message: fileErr && fileErr.message,
           stack: fileErr && fileErr.stack,
         }),
       });
-
-      // Surface as QL_ERROR instead of silently returning []
       throw error.create({
         name: "QL_ERROR",
         message:
@@ -308,7 +293,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     return {
       tranid: first.tranid,
       tranDate: first.trandatechar,
-      memo: potentialNull(first.invoicememo),
+      memo: first.invoicememo,
       custbody_cci_dedicated_payment: first.custbody_cci_dedicated_payment,
       externalId: first.externalid,
       entity: {
@@ -515,17 +500,14 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         return normalizeBoolean(value);
       case "number":
         return normalizeNumber(value);
-      case "string":
+      case "string": {
+        const trimmed = String(value).trim();
+        if (trimmed === "") return null;
+        return trimmed;
+      }
       default:
-        // no normalization for strings (for now)
         return value;
     }
-  };
-
-  const potentialNull = (value) => {
-    // Treat undefined / empty string as null for cleaner comparisons
-    if (value == null || value === "") return null;
-    return value;
   };
 
   const normalizeBoolean = (value) => {
@@ -565,8 +547,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     if (!isNaN(parsed.getTime())) {
       return parsed.toISOString().slice(0, 10);
     }
-
-    // Can't parse → leave unchanged so you can see issues during comparison
     return value;
   };
 
