@@ -54,9 +54,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
   const post = (body) => {
     const bodyText = typeof body === "string" ? body : JSON.stringify(body);
 
-    const start = new Date();
-    log.debug({ title: "POST_START", details: `ts: ${start}` });
-
     try {
       const payload =
         body && typeof body === "object" ? body : JSON.parse(bodyText);
@@ -73,61 +70,72 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       // ----- SuiteQL ----- //
       const fileRows = getQLrows(tranId);
 
-      //need a STATUS field in the response object - Equivalent, Not Equivalent, Error, Not found in NS
-      //this way we can handle it differently based on the response
-      //we need a better system of building a response for different scenarios.
-
       const noVendorBillFound = !fileRows || fileRows.length === 0;
+
+      if (noVendorBillFound) {
+        const responsePayload = {
+          status: "NOT_FOUND",
+          message: `No vendor bill found in NetSuite for tranid ${tranId}.`,
+          //isEquivalent: false,
+        };
+
+        return makeResponse(true, responsePayload);
+      }
 
       const mappedFromSuiteQL = getVendorbillObj(fileRows);
 
       // ----- comparison ----- //
       let comparisonResult = null;
 
-      if (!noVendorBillFound && mappedFromSuiteQL) {
-        try {
-          const headerResult = compareHeaders(payload, mappedFromSuiteQL);
-          const lineResult = compareLines(payload, mappedFromSuiteQL);
+      try {
+        const headerResult = compareHeaders(payload, mappedFromSuiteQL);
+        const lineResult = compareLines(payload, mappedFromSuiteQL);
 
-          comparisonResult = {
-            isEquivalent: headerResult.isEqual && lineResult.isEqual,
-            headerDifferences: headerResult.differences,
-            lineDifferences: lineResult.differences,
-          };
+        comparisonResult = {
+          isEquivalent: headerResult.isEqual && lineResult.isEqual,
+          headerDifferences: headerResult.differences,
+          lineDifferences: lineResult.differences,
+        };
 
-          if (!comparisonResult.isEquivalent) {
-            log.debug({
-              title: "COMPARISON_MISMATCH",
-              details: JSON.stringify(comparisonResult),
-            });
-          } else {
-            log.debug({
-              title: "COMPARISON_MATCH",
-              details:
-                "Incoming invoice payload is equivalent to SuiteQL vendor bill data.",
-            });
-          }
-        } catch (cmpErr) {
-          log.error({
-            title: "COMPARISON_ERROR",
-            details: JSON.stringify({
-              name: cmpErr && cmpErr.name,
-              message: cmpErr && cmpErr.message,
-              stack: cmpErr && cmpErr.stack,
-            }),
+        if (!comparisonResult.isEquivalent) {
+          log.debug({
+            title: "COMPARISON_MISMATCH",
+            details: JSON.stringify(comparisonResult),
+          });
+        } else {
+          log.debug({
+            title: "COMPARISON_MATCH",
+            details:
+              "Incoming invoice payload is equivalent to SuiteQL vendor bill data.",
           });
         }
+      } catch (cmpErr) {
+        log.error({
+          title: "COMPARISON_ERROR",
+          details: JSON.stringify({
+            name: cmpErr && cmpErr.name,
+            message: cmpErr && cmpErr.message,
+            stack: cmpErr && cmpErr.stack,
+          }),
+        });
+
+        // Surface as structured COMPARISON_ERROR status
+        throw error.create({
+          name: "COMPARISON_ERROR",
+          message:
+            (cmpErr && cmpErr.message) || "Unexpected error during comparison.",
+        });
       }
 
-      const end = new Date();
-      const durationMs = end - start;
-      log.debug({ title: "Restlet Duration (ms)", details: durationMs });
+      const status = comparisonResult.isEquivalent
+        ? "EQUIVALENT"
+        : "NOT_EQUIVALENT";
 
       // build response payload
       const responsePayload = {
+        status,
         message: "Restlet ran successfully",
         isEquivalent: comparisonResult ? comparisonResult.isEquivalent : false,
-        durationMs,
       };
 
       // only include differences if there are any
@@ -153,12 +161,34 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         title: "POST_ERROR",
         details: e && e.message ? `${e.name || "ERROR"}: ${e.message}` : e,
       });
+
+      // Validation errors → GENERAL_ERROR with isOK = false
       if (e && e.name === "VALIDATION_ERROR") {
-        return makeResponse(false, e.message);
+        return makeResponse(false, {
+          status: "GENERAL_ERROR",
+          message: e.message,
+        });
       }
 
-      // For unexpected/system errors, rethrow to surface as HTTP 500
-      throw e;
+      // Known internal pipeline errors → surfaced with status, but isOK = true
+      if (
+        e &&
+        (e.name === "QL_ERROR" ||
+          e.name === "MAPPING_ERROR" ||
+          e.name === "COMPARISON_ERROR")
+      ) {
+        return makeResponse(true, {
+          status: e.name,
+          message: e.message || "An error occurred.",
+          isEquivalent: false,
+        });
+      }
+
+      // Fallback for any other unexpected error
+      return makeResponse(false, {
+        status: "GENERAL_ERROR",
+        message: e && e.message ? e.message : "Unexpected error.",
+      });
     }
   };
 
@@ -227,7 +257,13 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         }),
       });
 
-      return [];
+      // Surface as QL_ERROR instead of silently returning []
+      throw error.create({
+        name: "QL_ERROR",
+        message:
+          (fileErr && fileErr.message) ||
+          `Error while executing SuiteQL for tranid ${tranId}`,
+      });
     }
   };
 
@@ -253,7 +289,14 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
           stack: mapErr && mapErr.stack,
         }),
       });
-      return null;
+
+      // Surface as MAPPING_ERROR instead of returning null
+      throw error.create({
+        name: "MAPPING_ERROR",
+        message:
+          (mapErr && mapErr.message) ||
+          "Error while mapping SuiteQL rows to vendor bill shape.",
+      });
     }
   };
 
