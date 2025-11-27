@@ -46,7 +46,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
   const get = () => {
     const _timestamp = new Date().toISOString();
     log.audit({ title: "GET_START", details: `GET invoked at: ${_timestamp}` });
-    return makeResponse(true, {
+    return JSON.stringify({
       message: `restlet is deployed and the 'get' is working (ts: ${_timestamp})`,
     });
   };
@@ -76,10 +76,10 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         const responsePayload = {
           status: "NOT_FOUND",
           message: `No vendor bill found in NetSuite for tranid ${tranId}.`,
-          //isEquivalent: false,
+          isEquivalent: false,
         };
 
-        return makeResponse(true, responsePayload);
+        return makeResponse(false, responsePayload);
       }
 
       const mappedFromSuiteQL = getVendorbillObj(fileRows);
@@ -134,7 +134,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       // build response payload
       const responsePayload = {
         status,
-        message: "Restlet ran successfully",
         isEquivalent: comparisonResult ? comparisonResult.isEquivalent : false,
       };
 
@@ -180,10 +179,8 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
   };
 
   //---------------------some helper funcs-----------------------
-  const makeResponse = (isOK, payload) =>
-    JSON.stringify(
-      isOK ? { isOK: true, data: payload } : { isOK: false, error: payload }
-    );
+  const makeResponse = (ranSuccessfully, payload) =>
+    JSON.stringify({ evaluationSucceeded: ranSuccessfully, ...payload });
 
   const loadSqlFromFile = (fileId) => {
     //log.audit({ title: 'FILE_LOAD_START', details: `Attempting to load SQL file ID: ${fileId}` });
