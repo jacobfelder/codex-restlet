@@ -72,9 +72,13 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       // ----- SuiteQL ----- //
       const fileRows = getQLrows(tranId);
+
+      //need a STATUS field in the response object - Equivalent, Not Equivalent, Error, Not found in NS
+      //this way we can handle it differently based on the response
+      //we need a better system of building a response for different scenarios.
+
       const noVendorBillFound = !fileRows || fileRows.length === 0;
 
-      // ----- mapping ----- //
       const mappedFromSuiteQL = getVendorbillObj(fileRows);
 
       // ----- comparison ----- //
@@ -100,7 +104,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
             log.debug({
               title: "COMPARISON_MATCH",
               details:
-                "Incoming payload is equivalent to SuiteQL vendor bill data.",
+                "Incoming invoice payload is equivalent to SuiteQL vendor bill data.",
             });
           }
         } catch (cmpErr) {
@@ -117,7 +121,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       const end = new Date();
       const durationMs = end - start;
-      log.debug({ title: "Load Duration (ms)", details: durationMs });
+      log.debug({ title: "Restlet Duration (ms)", details: durationMs });
 
       // build response payload
       const responsePayload = {
@@ -171,6 +175,12 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     const contents = fileObj.getContents();
 
     //log.audit({ title: 'FILE_LOAD_SUCCESS', details: `Loaded file name: ${fileObj.name}, size: ${contents.length} chars`});
+    if (contents.length === 0) {
+      log.error({
+        title: "FILE_LOAD_FAILURE",
+        details: `Unable to loaded file ${fileId}`,
+      });
+    }
 
     return contents;
   };
@@ -209,7 +219,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       return rows;
     } catch (fileErr) {
       log.error({
-        title: "FILE_SQL_ERROR",
+        title: "FILE_QL_ERROR",
         details: JSON.stringify({
           name: fileErr && fileErr.name,
           message: fileErr && fileErr.message,
@@ -217,7 +227,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         }),
       });
 
-      // On error, treat as "no rows" so caller can decide what to do
       return [];
     }
   };
@@ -251,13 +260,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
   // ------------------ mapping helpers ------------------ //
 
   const mapHeaderFromSuiteQL = (rows) => {
-    if (!rows || rows.length === 0) {
-      throw error.create({
-        name: "MAPPING_ERROR",
-        message: "No SuiteQL rows provided to header mapper.",
-      });
-    }
-
     const first = rows[0];
 
     return {
@@ -304,7 +306,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       cseg_cci_location: {
         externalId: row.cci_locationexternalid,
       },
-      // Coupa order line number key
       coupaorderlinenumber: row.coupaorderlinenumber,
       custcol_cci_ext_taxcode: {
         // externalid not available in SuiteQL, only id
