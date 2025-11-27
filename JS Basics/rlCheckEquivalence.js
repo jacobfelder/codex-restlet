@@ -4,17 +4,11 @@
  */
 
 // @ts-expect-error Define is OK for restlets
-define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
-  error,
-  log,
-  record,
-  query,
-  file
-) => {
+define(["N/error", "N/log", "N/query", "N/file"], (error, log, query, file) => {
   //----------------------------constants needed for restlet---------------------
 
-  //const SQL_FILE_ID = 718177;  //can use fileID or path
-  const SQL_FILE_ID = "/SuiteScripts/JF Test/ql_check_vb_equivalence.sql";
+  //const QL_FILE_ID = 718177;  //can use fileID or path
+  const QL_FILE_ID = "/SuiteScripts/JF Test/ql_check_vb_equivalence.sql";
 
   const HEADER_FIELDS = [
     { path: "tranid", type: "string" },
@@ -67,7 +61,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
       const tranId = payload.tranid;
 
-      // ----- SuiteQL ----- //
       const fileRows = getQLrows(tranId);
 
       const noVendorBillFound = !fileRows || fileRows.length === 0;
@@ -82,7 +75,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         return makeResponse(false, responsePayload);
       }
 
-      const mappedFromSuiteQL = getVendorbillObj(fileRows);
+      const mappedFromSuiteQL = getExistingVendorbillObj(fileRows);
 
       // ----- comparison ----- //
       let comparisonResult = null;
@@ -119,7 +112,6 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
           }),
         });
 
-        // Surface as structured COMPARISON_ERROR status
         throw error.create({
           name: "COMPARISON_ERROR",
           message:
@@ -127,31 +119,21 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         });
       }
 
-      const status = comparisonResult.isEquivalent
-        ? "EQUIVALENT"
-        : "NOT_EQUIVALENT";
+      const { isEquivalent, headerDifferences, lineDifferences } =
+        comparisonResult;
 
-      // build response payload
       const responsePayload = {
-        status,
-        isEquivalent: comparisonResult ? comparisonResult.isEquivalent : false,
+        status: isEquivalent ? "EQUIVALENT" : "NOT_EQUIVALENT",
+        isEquivalent,
       };
 
-      // only include differences if there are any
-      if (
-        comparisonResult &&
-        comparisonResult.headerDifferences &&
-        comparisonResult.headerDifferences.length > 0
-      ) {
-        responsePayload.headerDifferences = comparisonResult.headerDifferences;
+      // Add differences only when they exist
+      if (headerDifferences?.length) {
+        responsePayload.headerDifferences = headerDifferences;
       }
 
-      if (
-        comparisonResult &&
-        comparisonResult.lineDifferences &&
-        comparisonResult.lineDifferences.length > 0
-      ) {
-        responsePayload.lineDifferences = comparisonResult.lineDifferences;
+      if (lineDifferences?.length) {
+        responsePayload.lineDifferences = lineDifferences;
       }
 
       return makeResponse(true, responsePayload);
@@ -209,7 +191,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
 
   const getQLrows = (tranId) => {
     try {
-      const fileSql = loadSqlFromFile(SQL_FILE_ID);
+      const fileSql = loadSqlFromFile(QL_FILE_ID);
       const fileResultSet = query.runSuiteQL({
         query: fileSql,
         params: [tranId],
@@ -249,7 +231,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     }
   };
 
-  const getVendorbillObj = (fileRows) => {
+  const getExistingVendorbillObj = (fileRows) => {
     if (!fileRows || fileRows.length === 0) {
       log.debug({
         title: "MAPPING_SKIPPED",
@@ -259,7 +241,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
     }
 
     try {
-      const mappedFromSuiteQL = mapSuiteQLToIncomingShape(fileRows);
+      const mappedFromSuiteQL = mapSuiteQLToVendorbillObj(fileRows);
       //log.debug({ title: "MAPPED_FROM_SUITEQL", details: JSON.stringify(mappedFromSuiteQL) });
       return mappedFromSuiteQL;
     } catch (mapErr) {
@@ -340,7 +322,7 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
       custcol_cci_ext_taxamount: row.taxamount,
     }));
 
-  const mapSuiteQLToIncomingShape = (rows) => {
+  const mapSuiteQLToVendorbillObj = (rows) => {
     const header = mapHeaderFromSuiteQL(rows);
     const lineItems = mapLinesFromSuiteQL(rows);
 
@@ -350,6 +332,8 @@ define(["N/error", "N/log", "N/record", "N/query", "N/file"], (
         items: lineItems,
       },
       expense: {
+        //need to confirm if expenses can ever exist here and may need to add it to equivalency
+        //should test to confirm it fails as of now - just in case
         items: [],
       },
     };
